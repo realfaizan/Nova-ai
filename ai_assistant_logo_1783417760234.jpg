@@ -1,0 +1,168 @@
+import React from 'react';
+import { Plus, MessageSquare, Loader2, Sparkles, Settings, Compass, LogOut, Shield, Search, Trash2 } from 'lucide-react';
+import { cn } from './ChatMessage';
+import { auth } from '../lib/firebase';
+import { signOut } from 'firebase/auth';
+
+interface ChatSession {
+  id: string;
+  title: string;
+  createdAt: any;
+}
+
+interface SidebarProps {
+  chats: ChatSession[];
+  activeChatId: string | null;
+  onSelectChat: (id: string) => void;
+  onNewChat: () => void;
+  onOpenUpgrade: () => void;
+  onOpenAdmin: () => void;
+  onDeleteChat?: (id: string) => void;
+  userEmail: string | null;
+  isLoadingChats: boolean;
+}
+
+export default function Sidebar({
+  chats,
+  activeChatId,
+  onSelectChat,
+  onNewChat,
+  onOpenUpgrade,
+  onOpenAdmin,
+  onDeleteChat,
+  userEmail,
+  isLoadingChats
+}: SidebarProps) {
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Failed to log out', error);
+    }
+  };
+
+  const isAdmin = userEmail === 'kojvhy@gmail.com';
+  
+  const filteredChats = chats.filter(chat => 
+    chat.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <div className="w-64 bg-white/30 dark:bg-gray-900/30 backdrop-blur-md border-r border-white/20 dark:border-gray-700/30 flex flex-col h-full flex-shrink-0">
+      <div className="p-4 space-y-2">
+        <button
+          onClick={onNewChat}
+          className="w-full flex items-center justify-start gap-3 bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-700/80 text-gray-900 dark:text-gray-100 py-3 px-4 rounded-full transition-colors font-medium shadow-sm border border-white/40 dark:border-white/5"
+        >
+          <Plus size={18} />
+          New Chat
+        </button>
+        <button className="w-full flex items-center justify-start gap-3 hover:bg-white/40 dark:hover:bg-gray-800/40 text-gray-700 dark:text-gray-300 py-2.5 px-4 rounded-full transition-colors text-sm font-medium">
+          <Compass size={18} />
+          Explore Modes
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+        <div className="relative mb-4 mt-2 px-1">
+          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+            <Search size={14} className="text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search chats..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white/40 dark:bg-gray-800/40 border border-white/20 dark:border-white/5 rounded-full py-1.5 pl-8 pr-3 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition-all"
+          />
+        </div>
+
+        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3 px-2">
+          Recent
+        </div>
+        
+        {isLoadingChats ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+          </div>
+        ) : filteredChats.length === 0 ? (
+          <div className="text-sm text-gray-500 dark:text-gray-400 px-2 py-2 text-center">
+            {searchQuery ? 'No chats found' : 'No chats yet'}
+          </div>
+        ) : (
+          filteredChats.map((chat) => (
+            <div key={chat.id} className="relative group flex items-center">
+              <button
+                onClick={() => onSelectChat(chat.id)}
+                className={cn(
+                  "flex-1 flex items-center gap-3 px-4 py-2.5 rounded-full text-sm transition-colors text-left overflow-hidden",
+                  activeChatId === chat.id
+                    ? "bg-white/60 dark:bg-gray-800/60 text-gray-900 dark:text-gray-100 font-medium shadow-sm"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-white/40 dark:hover:bg-gray-800/40"
+                )}
+              >
+                <MessageSquare size={16} className={cn("flex-shrink-0", activeChatId === chat.id ? "text-gray-900 dark:text-gray-100" : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300")} />
+                <span className="truncate">{chat.title}</span>
+              </button>
+              {onDeleteChat && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteChat(chat.id);
+                  }}
+                  className={cn(
+                    "absolute right-2 p-1.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-white/80 dark:hover:bg-gray-700/80 transition-all opacity-0 group-hover:opacity-100",
+                    activeChatId === chat.id && "opacity-100 bg-white/40 dark:bg-gray-800/40"
+                  )}
+                  title="Delete chat"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="p-3 border-t border-white/20 dark:border-gray-700/30 space-y-1">
+        {isAdmin && (
+          <button 
+            onClick={onOpenAdmin}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-600 dark:text-red-400 hover:bg-white/40 dark:hover:bg-gray-800/40 transition-colors font-medium"
+          >
+            <Shield size={18} />
+            Admin Dashboard
+          </button>
+        )}
+        <button 
+          onClick={onOpenUpgrade}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-white/40 dark:hover:bg-gray-800/40 transition-colors font-medium"
+        >
+          <div className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white">
+            <Sparkles size={12} />
+          </div>
+          Upgrade to Pro
+        </button>
+        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-white/40 dark:hover:bg-gray-800/40 transition-colors">
+          <Settings size={18} className="text-gray-500" />
+          Settings
+        </button>
+        <div className="flex items-center justify-between px-3 py-2.5 mt-2 bg-white/40 dark:bg-gray-800/40 rounded-lg border border-white/40 dark:border-white/5">
+          <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate pr-2 flex-1">
+            {userEmail}
+          </div>
+          <button
+            onClick={handleLogout}
+            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+            title="Log out"
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
